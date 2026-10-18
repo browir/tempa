@@ -34,6 +34,7 @@
         "QUEUE_CONNECTION": "sync",
         "DB_CONNECTION": "pgsql",
         "DB_SSLMODE": "require",
+        "DB_SEARCH_PATH": "tempa",
         "INERTIA_SSR_ENABLED": "false"
     }
 }

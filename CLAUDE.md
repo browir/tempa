@@ -151,22 +151,35 @@ Prinsip:
    `regions: ["sin1"]`, function `api/index.php` dengan `vercel-php@0.8.0` dan `excludeFiles`, route
    `/build/*` immutable, `/` dan sisanya ke `/api/index.php`, env runtime: cache path ke `/tmp/*.php`,
    `VIEW_COMPILED_PATH=/tmp`, `LOG_CHANNEL=stderr`, `SESSION_DRIVER=cookie`, `SESSION_SECURE_COOKIE=true`,
-   `CACHE_STORE=database`, `QUEUE_CONNECTION=sync`, `DB_CONNECTION=pgsql`, `DB_SSLMODE=require`).
+   `CACHE_STORE=database`, `QUEUE_CONNECTION=sync`, `DB_CONNECTION=pgsql`, `DB_SSLMODE=require`,
+   **`DB_SEARCH_PATH=tempa`** — lihat poin 9).
 3. `bootstrap/app.php`: `$middleware->trustProxies(at: '*')` agar HTTPS terbaca di belakang proxy Vercel.
 4. Env rahasia di dashboard Vercel (Production): `APP_KEY`, `APP_NAME`, `DB_URL`, `OWNER_EMAIL`, `OWNER_PASSWORD`.
 5. **`public/build` di-commit.** Setiap perubahan CSS/JS/Vue → `npm run build` lalu commit hasilnya
    (`.gitignore` tidak boleh mengabaikan `/public/build`). Lupa build = produksi menampilkan versi lama.
 6. **Migrasi produksi manual**, dua cara:
    - (utama) dari lokal: `php artisan migrate --env=supabase` memakai `.env.supabase` (gitignored; berisi
-     `APP_ENV, APP_KEY, DB_CONNECTION=pgsql, DB_SSLMODE=require, DB_URL, OWNER_*`). Cek dulu dengan `--pretend`.
-     Jalankan **sebelum push** bila migrasinya aditif.
+     `APP_ENV, APP_KEY, DB_CONNECTION=pgsql, DB_SSLMODE=require, DB_SEARCH_PATH=tempa, DB_URL, OWNER_*`;
+     contoh di `.env.supabase.example`). Pertama kali: `php artisan db:ensure-schema --env=supabase`.
+     Cek dulu dengan `--pretend`. Jalankan **sebelum push** bila migrasinya aditif.
    - (cadangan) route `/_ops/migrate/{token}` dengan token = `HMAC-SHA256("ops-migrate", APP_KEY)`,
-     dibandingkan dengan `hash_equals`, menjalankan `migrate --force` + `db:seed --force`, keluaran teks polos.
+     dibandingkan dengan `hash_equals`, menjalankan `db:ensure-schema` + `migrate --force` + `db:seed --force`,
+     keluaran teks polos.
 7. **RLS Supabase**: Supabase membuka tabel schema `public` lewat Data API. Setiap tabel baru harus
    `ENABLE ROW LEVEL SECURITY` (tanpa policy) di migrasinya — hanya bila driver `pgsql`. Laravel terhubung
    sebagai pemilik tabel sehingga tidak terdampak. Lihat migrasi `enable_row_level_security` di Sisih.
-8. Koneksi: pakai **session pooler (port 5432)** di `DB_URL`. Bila memakai transaction pooler (6543),
-   set `DB_EMULATE_PREPARES=true` (opsi PDO di `config/database.php` sudah disiapkan di Sisih).
+8. Koneksi: **wajib session pooler (port 5432)** di `DB_URL`. Transaction pooler (6543) tidak boleh dipakai
+   karena `search_path` dipasang per koneksi (poin 9). (`DB_EMULATE_PREPARES` tetap disiapkan seperti Sisih.)
+9. **Database numpang di project Supabase Sisih** (kuota project gratis habis, keputusan user 2026-10-18).
+   Semua tabel Tempa ada di schema Postgres **`tempa`**, terpisah dari schema `public` milik Sisih:
+   `config/database.php` membaca `search_path` dari `DB_SEARCH_PATH` (lokal/tes: `public`, SQLite tak terpengaruh).
+   - `DB_URL` = connection string session pooler project **Sisih**; `APP_KEY` tetap milik Tempa sendiri.
+   - Schema dibuat oleh `php artisan db:ensure-schema` (`routes/console.php`, idempoten).
+   - Data API Supabase hanya membuka schema `public`, jadi `tempa` tidak terekspos; RLS tetap dinyalakan
+     (poin 7) sebagai lapis kedua.
+   - Jangan pernah menyentuh schema `public` dari Tempa, dan jangan menjalankan `migrate:fresh`/`db:wipe`
+     terhadap Supabase — itu menghapus tabel **Sisih** juga.
+   - Kuota 500 MB dipakai berdua; project mati = kedua aplikasi mati.
 
 ## 9. Pengembangan lokal (Windows + XAMPP)
 

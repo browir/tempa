@@ -114,6 +114,21 @@ class AuthAndFoundationTest extends TestCase
         $this->assertSame(0, User::count());
     }
 
+    public function test_ensure_schema_aman_di_sqlite(): void
+    {
+        $this->artisan('db:ensure-schema')
+            ->expectsOutput('Tidak perlu membuat schema.')
+            ->assertSuccessful();
+    }
+
+    public function test_search_path_pgsql_dibaca_dari_env(): void
+    {
+        // Lokal & tes memakai "public"; produksi menimpanya dengan DB_SEARCH_PATH=tempa (vercel.json).
+        $this->assertSame('public', config('database.connections.pgsql.search_path'));
+        $vercel = json_decode(file_get_contents(base_path('vercel.json')), true);
+        $this->assertSame('tempa', $vercel['env']['DB_SEARCH_PATH']);
+    }
+
     public function test_ops_migrate_menolak_token_salah(): void
     {
         $this->get('/_ops/migrate/token-ngawur')->assertNotFound();

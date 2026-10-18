@@ -95,7 +95,8 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            'search_path' => 'public',
+            // Produksi numpang di database Supabase Sisih, tabel Tempa di schema sendiri (DB_SEARCH_PATH=tempa).
+            'search_path' => env('DB_SEARCH_PATH', 'public'),
             'sslmode' => env('DB_SSLMODE', 'prefer'),
             // Pooler Supabase mode transaksi (port 6543) tidak mendukung prepared statement.
             'options' => extension_loaded('pdo_pgsql') ? [

@@ -32,6 +32,9 @@ Route::get('/_ops/migrate/{token}', function (string $token) {
     $output = '';
 
     try {
+        Artisan::call('db:ensure-schema');
+        $output .= Artisan::output();
+
         Artisan::call('migrate', ['--force' => true]);
         $output .= Artisan::output();
 
