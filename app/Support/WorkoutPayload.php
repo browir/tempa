@@ -19,6 +19,8 @@ class WorkoutPayload
             'notes' => $workout->notes,
             'started_at' => $workout->started_at->toIso8601String(),
             'ended_at' => $workout->ended_at?->toIso8601String(),
+            'paused_at' => $workout->paused_at?->toIso8601String(),
+            'paused_seconds' => $workout->paused_seconds,
             'exercises' => $workout->exercises->map(fn (WorkoutExercise $we) => [
                 'client_id' => $we->client_id,
                 'exercise_id' => $we->exercise_id,

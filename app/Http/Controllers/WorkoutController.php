@@ -6,6 +6,7 @@ use App\Models\Workout;
 use App\Models\WorkoutExercise;
 use App\Models\WorkoutSet;
 use App\Support\ClientTime;
+use App\Support\ExercisePayload;
 use App\Support\WorkoutPayload;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -58,16 +59,7 @@ class WorkoutController extends Controller
 
         return Inertia::render('workouts/Index', [
             'active' => $active ? WorkoutPayload::full($active) : null,
-            'exercises' => $user->exercises()->orderBy('sort')->orderBy('id')
-                ->get(['id', 'name', 'muscle_group', 'equipment', 'kind', 'archived_at'])
-                ->map(fn ($e) => [
-                    'id' => $e->id,
-                    'name' => $e->name,
-                    'muscle_group' => $e->muscle_group,
-                    'equipment' => $e->equipment,
-                    'kind' => $e->kind,
-                    'archived' => $e->archived_at !== null,
-                ]),
+            'exercises' => ExercisePayload::forUser($user),
             'history' => (object) $history->all(),
             // Gerakan yang baru dipakai (id terbesar = paling baru), untuk bagian atas pemilih gerakan.
             'recent' => $latest->sortDesc()->keys()->take(12)->values(),
@@ -111,13 +103,22 @@ class WorkoutController extends Controller
     public function update(Request $request, Workout $workout)
     {
         $this->ensureOwned($workout);
-        $workout->update($request->validate([
-            'name' => ['nullable', 'string', 'max:80'],
-            'notes' => ['nullable', 'string', 'max:2000'],
+        $data = $request->validate([
+            'name' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            // Jeda: nilai mutlak dari HP (sumber kebenaran sesi aktif), jadi kirim ulang tetap aman.
+            'paused_at' => ['sometimes', 'nullable', 'date'],
+            'paused_seconds' => ['sometimes', 'integer', 'min:0', 'max:604800'],
         ], [
             'name.max' => 'Nama sesi maksimal 80 karakter.',
             'notes.max' => 'Catatan maksimal 2000 karakter.',
-        ]));
+            'paused_at.*' => 'Waktu jeda tidak valid.',
+            'paused_seconds.*' => 'Lama jeda tidak valid.',
+        ]);
+        if (array_key_exists('paused_at', $data)) {
+            $data['paused_at'] = ClientTime::parse($data['paused_at']);
+        }
+        $workout->update($data);
 
         return $this->ok();
     }
@@ -125,12 +126,19 @@ class WorkoutController extends Controller
     public function finish(Request $request, Workout $workout)
     {
         $this->ensureOwned($workout);
-        $data = $request->validate(['ended_at' => ['required', 'date']], ['ended_at.*' => 'Waktu selesai tidak valid.']);
+        $data = $request->validate([
+            'ended_at' => ['required', 'date'],
+            'paused_seconds' => ['nullable', 'integer', 'min:0', 'max:604800'],
+        ], ['ended_at.*' => 'Waktu selesai tidak valid.', 'paused_seconds.*' => 'Lama jeda tidak valid.']);
 
         // Idempoten: kirim ulang tidak menggeser waktu selesai.
         if (! $workout->ended_at) {
             $endedAt = ClientTime::parse($data['ended_at']);
-            $workout->update(['ended_at' => $endedAt->lt($workout->started_at) ? $workout->started_at : $endedAt]);
+            $workout->update([
+                'ended_at' => $endedAt->lt($workout->started_at) ? $workout->started_at : $endedAt,
+                'paused_at' => null,
+                'paused_seconds' => $data['paused_seconds'] ?? $workout->paused_seconds,
+            ]);
         }
 
         return $this->ok();

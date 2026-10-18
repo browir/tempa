@@ -1,9 +1,12 @@
 <script setup>
 import { router } from '@inertiajs/vue3';
 import { Undo2 } from 'lucide-vue-next';
+import { useRestTimer } from '@/composables/useRestTimer';
 import { dismissToast, useToasts } from '@/composables/useToast';
 
 const toasts = useToasts();
+// Bar timer istirahat memakai tempat yang sama di bawah layar: toast naik di atasnya.
+const { rest } = useRestTimer();
 
 // undo: URL (server, mis. pulihkan gerakan) atau fungsi (lokal, mis. set yang dihapus di sesi aktif).
 function undo(toast) {
@@ -15,7 +18,8 @@ function undo(toast) {
 
 <template>
     <div
-        class="pointer-events-none fixed inset-x-0 bottom-[calc(96px+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 px-4 md:right-6 md:bottom-6 md:left-auto md:items-end"
+        class="pointer-events-none fixed inset-x-0 z-[60] flex flex-col items-center gap-2 px-4 md:right-6 md:left-auto md:items-end"
+        :class="rest ? 'bottom-[calc(168px+env(safe-area-inset-bottom))] md:bottom-28' : 'bottom-[calc(96px+env(safe-area-inset-bottom))] md:bottom-6'"
         aria-live="polite"
     >
         <TransitionGroup name="toast">

@@ -62,14 +62,21 @@ router.on('navigate', (event) => {
 
 startOutbox();
 
-// Siapkan salinan halaman Latihan & Gerakan di cache service worker selagi online, supaya sesi
-// tetap bisa dibuka/dimulai walau sinyal gym hilang sebelum halaman itu sempat dikunjungi.
+// Siapkan salinan halaman Latihan, Gerakan & Riwayat di cache service worker selagi online, supaya
+// tetap bisa dibuka walau sinyal gym hilang sebelum halaman itu sempat dikunjungi.
+// Sengaja fetch biasa, bukan router.prefetch: prefetch Inertia menyimpan salinan di memori dan
+// menampilkannya saat dikunjungi (data basi, mis. sesi yang baru selesai tidak muncul di riwayat).
 router.on('navigate', (event) => {
-    if (!navigator.onLine || event.detail.page.component.startsWith('auth/')) return;
+    const { page } = event.detail;
+    if (!navigator.onLine || page.component.startsWith('auth/') || !('serviceWorker' in navigator)) return;
     clearTimeout(window.__tempaWarm);
     window.__tempaWarm = setTimeout(() => {
-        for (const name of ['workouts.index', 'exercises.index']) {
-            if (route().has(name) && route().current() !== name) router.prefetch(route(name), { method: 'get' }, { cacheFor: '30s' });
+        for (const name of ['workouts.index', 'exercises.index', 'history.index']) {
+            if (!route().has(name) || route().current() === name) continue;
+            fetch(route(name), {
+                credentials: 'same-origin',
+                headers: { 'X-Inertia': 'true', 'X-Inertia-Version': page.version ?? '', 'X-Requested-With': 'XMLHttpRequest' },
+            }).catch(() => {});
         }
     }, 2500);
 });

@@ -1,27 +1,35 @@
 <script setup>
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { useNow } from '@vueuse/core';
-import { Flag, Flame, Plus, Trash2 } from 'lucide-vue-next';
+import { Check, Flag, Flame, History, Pause, Play, Plus, Trash2 } from 'lucide-vue-next';
 import { computed, onMounted, ref } from 'vue';
+import { route } from 'ziggy-js';
 import Sheet from '@/components/ui/Sheet.vue';
 import ExercisePicker from '@/components/workout/ExercisePicker.vue';
 import SetEditor from '@/components/workout/SetEditor.vue';
 import WorkoutExerciseCard from '@/components/workout/WorkoutExerciseCard.vue';
+import WorkoutSummary from '@/components/workout/WorkoutSummary.vue';
+import { usePrefs } from '@/composables/usePrefs';
+import { startRest, stopRest } from '@/composables/useRestTimer';
 import { pushToast } from '@/composables/useToast';
 import {
     addExercises,
     addSet,
     discardWorkout,
+    dismissSummary,
     finishWorkout,
     hydrateFromServer,
+    pauseWorkout,
     removeExercise,
     removeSet,
     renameWorkout,
+    resumeWorkout,
     startWorkout,
     updateSet,
     useWorkout,
 } from '@/composables/useWorkout';
 import { SET_KINDS, fieldsFor, isFilled, setBadges, volume } from '@/lib/sets';
+import { workoutSeconds } from '@/lib/summary';
 import { formatDuration, formatKm } from '@/lib/units';
 
 /**
@@ -35,8 +43,24 @@ const props = defineProps({
     recent: { type: Array, required: true },
 });
 
-const { session } = useWorkout();
+const { session, lastFinished, paused } = useWorkout();
+const prefs = usePrefs();
 const now = useNow({ interval: 1000 });
+
+/** Istirahat setelah set: kardio tidak memakai timer. */
+function rest(exercise) {
+    if (exercise.kind === 'cardio' || paused.value) return;
+    startRest(prefs.restSeconds, exercise.name);
+}
+
+function togglePause() {
+    if (paused.value) {
+        resumeWorkout();
+    } else {
+        pauseWorkout();
+        stopRest();
+    }
+}
 
 onMounted(() => {
     hydrateFromServer(props.active);
@@ -54,11 +78,7 @@ const exerciseOf = (entry) =>
     exercisesById.value[entry.exercise_id] ?? { id: entry.exercise_id, name: 'Gerakan', kind: 'weight_reps', muscle_group: 'other' };
 const previousOf = (entry) => props.history[entry.exercise_id] ?? null;
 
-const elapsed = computed(() => {
-    if (!session.value) return '';
-    const s = Math.max(0, Math.floor((now.value - new Date(session.value.started_at)) / 1000));
-    return formatDuration(s);
-});
+const elapsed = computed(() => (session.value ? formatDuration(workoutSeconds(session.value, now.value)) : ''));
 
 function setTitle(entry, set) {
     const i = entry.sets.indexOf(set);
@@ -85,6 +105,7 @@ function toggle(entry, set) {
     }
     updateSet(entry, set, patch, setTitle(entry, set));
     navigator.vibrate?.(15);
+    rest(exercise);
 }
 
 const KIND_ORDER = SET_KINDS.map((k) => k.value);
@@ -116,7 +137,10 @@ function saveSet({ patch, done }) {
     if (done === false) values.done_at = null;
     updateSet(entry, set, values, setTitle(entry, set));
     editor.value.open = false;
-    if (done) navigator.vibrate?.(15);
+    if (done) {
+        navigator.vibrate?.(15);
+        rest(exerciseOf(entry));
+    }
 }
 
 function deleteSet(entry = editor.value.entry, set = editor.value.set) {
@@ -174,18 +198,27 @@ function openFinish() {
 }
 
 function finish() {
-    const finished = finishWorkout();
+    stopRest();
+    finishWorkout();
     finishOpen.value = false;
-    const minutes = Math.max(1, Math.round((new Date(finished.ended_at) - new Date(finished.started_at)) / 60000));
-    pushToast({ message: `${finished.name} selesai · ${minutes} menit` });
+    navigator.vibrate?.([30, 60, 30]);
     window.scrollTo({ top: 0 });
 }
+
+const finishedLabel = computed(() =>
+    lastFinished.value
+        ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }).format(
+              new Date(lastFinished.value.started_at),
+          )
+        : '',
+);
 
 function discard() {
     if (!confirmDiscard.value) {
         confirmDiscard.value = true;
         return;
     }
+    stopRest();
     discardWorkout();
     finishOpen.value = false;
     pushToast({ message: 'Sesi dibuang' });
@@ -204,8 +237,30 @@ const nf = new Intl.NumberFormat('id-ID');
 <template>
     <Head title="Latihan" />
 
+    <!-- Baru selesai: ringkasan (dari HP, jadi tampil walau offline) -->
+    <div v-if="!session && lastFinished" class="max-w-2xl">
+        <section class="hero-card mb-5 p-6 md:p-8">
+            <Flame class="absolute -right-6 -bottom-8 -z-10 size-48 text-white opacity-[0.08]" :stroke-width="1.5" />
+            <p class="flex items-center gap-1.5 text-small font-medium tracking-[0.08em] text-(--hero-muted) uppercase">
+                <Check class="size-4" :stroke-width="2.6" /> Latihan selesai · tersimpan
+            </p>
+            <p class="mt-2 text-[26px] leading-tight font-semibold tracking-[-0.03em]">{{ lastFinished.name }}</p>
+            <p class="mt-1 text-[15px] text-(--hero-muted)">{{ finishedLabel }}</p>
+        </section>
+
+        <WorkoutSummary :workout="lastFinished" :exercises="exercises" />
+
+        <div class="mt-5 flex flex-col gap-2 sm:flex-row">
+            <Link :href="route('history.index')" class="btn btn-quiet h-12 sm:flex-1" @click="dismissSummary">
+                <History class="size-4" />
+                Lihat riwayat
+            </Link>
+            <button type="button" class="btn btn-primary h-12 sm:flex-1" @click="dismissSummary">Selesai</button>
+        </div>
+    </div>
+
     <!-- Belum ada sesi -->
-    <template v-if="!session">
+    <template v-else-if="!session">
         <h1 class="page-title mb-6">Latihan</h1>
         <section class="hero-card p-6 md:p-8">
             <Flame class="absolute -right-6 -bottom-8 -z-10 size-48 text-white opacity-[0.08]" :stroke-width="1.5" />
@@ -244,10 +299,22 @@ const nf = new Intl.NumberFormat('id-ID');
                     @keydown.enter="$event.target.blur()"
                 />
                 <p class="text-small text-muted">
-                    <span class="num text-ink-2">{{ elapsed }}</span>
+                    <span class="num" :class="paused ? 'text-warn' : 'text-ink-2'">{{ elapsed }}</span>
+                    <template v-if="paused"> · <span class="font-medium text-warn">dijeda</span></template>
                     · {{ summary.done }} set selesai
                 </p>
             </div>
+            <button
+                type="button"
+                class="icon-btn shrink-0 bg-sunken"
+                :class="paused && 'bg-accent-soft text-accent-text'"
+                :aria-label="paused ? 'Lanjutkan sesi' : 'Jeda sesi'"
+                :title="paused ? 'Lanjutkan' : 'Jeda'"
+                @click="togglePause"
+            >
+                <Play v-if="paused" class="size-5" />
+                <Pause v-else class="size-5" />
+            </button>
             <button type="button" class="btn btn-primary shrink-0" @click="openFinish">
                 <Flag class="size-4" />
                 Selesai
@@ -255,6 +322,15 @@ const nf = new Intl.NumberFormat('id-ID');
         </header>
 
         <div class="flex flex-col gap-4">
+            <section v-if="paused" class="card flex items-center gap-3 border-warn/40 px-4 py-3">
+                <Pause class="size-5 shrink-0 text-warn" />
+                <p class="min-w-0 flex-1 text-[14px] text-ink-2">Sesi dijeda — waktu jeda tidak dihitung ke durasi latihan.</p>
+                <button type="button" class="btn btn-primary shrink-0" @click="togglePause">
+                    <Play class="size-4" />
+                    Lanjut
+                </button>
+            </section>
+
             <WorkoutExerciseCard
                 v-for="entry in session.exercises"
                 :key="entry.client_id"

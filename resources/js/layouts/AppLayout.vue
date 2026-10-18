@@ -6,7 +6,16 @@ import { route } from 'ziggy-js';
 import OfflineBar from '@/components/OfflineBar.vue';
 import TempaMark from '@/components/ui/TempaMark.vue';
 import Toaster from '@/components/ui/Toaster.vue';
+import RestTimer from '@/components/workout/RestTimer.vue';
+import { useRestTimer } from '@/composables/useRestTimer';
 import { toggleTheme } from '@/composables/useTheme';
+import { useWakeLock } from '@/composables/useWakeLock';
+import { useWorkout } from '@/composables/useWorkout';
+
+// Selama sesi berjalan (tidak dijeda) layar dijaga tetap menyala, di halaman mana pun.
+const { session, paused } = useWorkout();
+useWakeLock(computed(() => !!session.value && !paused.value));
+const { rest } = useRestTimer();
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
@@ -94,7 +103,10 @@ const isActive = (item) => [].concat(item.match).some((m) => page.component.star
         </aside>
 
         <!-- Konten -->
-        <main class="min-w-0 pb-[calc(112px+env(safe-area-inset-bottom))] md:pb-16">
+        <main
+            class="min-w-0 md:pb-16"
+            :class="rest ? 'pb-[calc(192px+env(safe-area-inset-bottom))] md:pb-32' : 'pb-[calc(112px+env(safe-area-inset-bottom))]'"
+        >
             <div
                 :key="page.component"
                 class="page-enter mx-auto w-full max-w-[1080px] px-4 pt-[max(1.25rem,env(safe-area-inset-top))] md:px-10 md:pt-10"
@@ -129,6 +141,7 @@ const isActive = (item) => [].concat(item.match).some((m) => page.component.star
             </div>
         </nav>
 
+        <RestTimer />
         <Toaster />
     </div>
 </template>

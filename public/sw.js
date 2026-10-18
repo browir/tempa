@@ -36,6 +36,17 @@ self.addEventListener('fetch', (event) => {
     }
 });
 
+// Ketuk notifikasi (mis. "Istirahat selesai"): buka/fokus jendela Tempa di halaman latihan.
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+            const client = list.find((c) => new URL(c.url).origin === location.origin);
+            return client ? client.focus() : self.clients.openWindow('/latihan');
+        }),
+    );
+});
+
 async function cacheFirst(request) {
     const cache = await caches.open(ASSETS);
     const hit = await cache.match(request);

@@ -6,6 +6,7 @@ import { computed } from 'vue';
 import { route } from 'ziggy-js';
 import TempaMark from '@/components/ui/TempaMark.vue';
 import { startWorkout, useWorkout } from '@/composables/useWorkout';
+import { workoutSeconds } from '@/lib/summary';
 import { formatDuration } from '@/lib/units';
 
 const page = usePage();
@@ -23,9 +24,7 @@ const greeting = (() => {
 })();
 const dateLabel = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(today);
 
-const elapsed = computed(() =>
-    session.value ? formatDuration(Math.max(0, Math.floor((now.value - new Date(session.value.started_at)) / 1000))) : '',
-);
+const elapsed = computed(() => (session.value ? formatDuration(workoutSeconds(session.value, now.value)) : ''));
 const doneSets = computed(() => session.value?.exercises.flatMap((e) => e.sets).filter((s) => s.done_at).length ?? 0);
 
 // Sesi yang belum selesai di server tapi tidak ada di HP ini (dimulai di perangkat lain / data lokal terhapus).
@@ -42,9 +41,9 @@ function start() {
 }
 
 const upcoming = [
-    { icon: Timer, title: 'Timer istirahat', text: 'Berjalan sendiri setelah set selesai, layar tetap menyala.' },
-    { icon: Dumbbell, title: 'Rutinitas', text: 'Simpan program latihan, mulai sesi dari template.' },
-    { icon: Bike, title: 'Riwayat & progres', text: 'Grafik per gerakan, rekor pribadi, dan total jarak bersepeda.' },
+    { icon: Dumbbell, title: 'Rutinitas & jadwal', text: 'Program per hari (pola 3-1-2-1), mulai sesi langsung dari rutinitas.' },
+    { icon: Timer, title: 'Ubah riwayat', text: 'Perbaiki atau hapus sesi lama, dengan urungkan.' },
+    { icon: Bike, title: 'Progres', text: 'Grafik per gerakan, rekor pribadi, dan total jarak bersepeda.' },
 ];
 </script>
 
@@ -60,7 +59,9 @@ const upcoming = [
         <section class="hero-card p-6 md:p-8">
             <TempaMark class="absolute -right-6 -bottom-20 -z-10 size-48 text-white opacity-[0.07] md:size-56" />
             <template v-if="session">
-                <p class="text-small font-medium tracking-[0.08em] text-(--hero-muted) uppercase">Sesi berjalan</p>
+                <p class="text-small font-medium tracking-[0.08em] text-(--hero-muted) uppercase">
+                    {{ session.paused_at ? 'Sesi dijeda' : 'Sesi berjalan' }}
+                </p>
                 <p class="mt-2 text-[26px] leading-tight font-semibold tracking-[-0.03em]">{{ session.name }}</p>
                 <p class="mt-1 text-[15px] text-(--hero-muted)">
                     <span class="num text-(--hero-fg)">{{ elapsed }}</span> · {{ session.exercises.length }} gerakan · {{ doneSets }} set selesai

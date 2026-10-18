@@ -7,33 +7,38 @@ import { cancelPending, enqueue, newClientId } from '@/composables/useOutbox';
  * Setiap perubahan juga diantrekan ke server lewat outbox (idempoten, dirujuk dengan client_id).
  *
  * Bentuk sesi sama dengan App\Support\WorkoutPayload::full():
- * { client_id, name, notes, started_at, ended_at, exercises: [{ client_id, exercise_id, sort, notes, sets: [set] }] }
+ * { client_id, name, notes, started_at, ended_at, paused_at, paused_seconds,
+ *   exercises: [{ client_id, exercise_id, sort, notes, sets: [set] }] }
  * set: { client_id, sort, kind, weight_g, reps, duration_s, distance_m, rpe, done_at }
  */
 const KEY = 'tempa:workout';
-const session = ref(read());
+const LAST_KEY = 'tempa:last-finished';
+const session = ref(read(KEY, (v) => v.client_id && !v.ended_at));
+// Sesi yang baru diselesaikan: ringkasannya tampil sampai ditutup (tetap ada walau offline/reload).
+const lastFinished = ref(read(LAST_KEY, (v) => v.client_id && v.ended_at));
 
-function read() {
+function read(key, valid) {
     try {
-        const value = JSON.parse(localStorage.getItem(KEY) || 'null');
-        return value && value.client_id && !value.ended_at ? value : null;
+        const value = JSON.parse(localStorage.getItem(key) || 'null');
+        return value && valid(value) ? value : null;
     } catch {
         return null;
     }
 }
 
-watch(
-    session,
-    (value) => {
+function persist(key) {
+    return (value) => {
         try {
-            if (value) localStorage.setItem(KEY, JSON.stringify(value));
-            else localStorage.removeItem(KEY);
+            if (value) localStorage.setItem(key, JSON.stringify(value));
+            else localStorage.removeItem(key);
         } catch {
             // Penyimpanan diblokir: sesi tetap hidup selama tab terbuka, outbox tetap mengirim.
         }
-    },
-    { deep: true },
-);
+    };
+}
+
+watch(session, persist(KEY), { deep: true });
+watch(lastFinished, persist(LAST_KEY));
 
 const SET_FIELDS = ['weight_g', 'reps', 'duration_s', 'distance_m', 'rpe'];
 
@@ -93,8 +98,11 @@ export function startWorkout(name = null) {
         notes: null,
         started_at: new Date().toISOString(),
         ended_at: null,
+        paused_at: null,
+        paused_seconds: 0,
         exercises: [],
     };
+    lastFinished.value = null;
     enqueue({
         key: `workout:${session.value.client_id}`,
         routeName: 'workouts.store',
@@ -193,19 +201,58 @@ export function removeExercise(we, title) {
     });
 }
 
-/** Selesai: kirim waktu selesai, lalu sesi lokal dikosongkan. Mengembalikan ringkasan sesi. */
+/* ---------- Jeda ---------- */
+
+function syncPause() {
+    enqueue({
+        key: `workout-pause:${session.value.client_id}`,
+        routeName: 'workouts.update',
+        method: 'PUT',
+        params: workoutParams(),
+        payload: { paused_at: session.value.paused_at, paused_seconds: session.value.paused_seconds },
+        summary: { title: session.value.paused_at ? 'Jeda sesi' : 'Lanjutkan sesi' },
+    });
+}
+
+/** Jeda: waktu selama jeda tidak dihitung ke durasi latihan. */
+export function pauseWorkout() {
+    if (!session.value || session.value.paused_at) return;
+    session.value.paused_at = new Date().toISOString();
+    syncPause();
+}
+
+export function resumeWorkout() {
+    const s = session.value;
+    if (!s?.paused_at) return;
+    s.paused_seconds = (s.paused_seconds ?? 0) + Math.max(0, Math.round((Date.now() - new Date(s.paused_at)) / 1000));
+    s.paused_at = null;
+    syncPause();
+}
+
+/** Selesai: kirim waktu selesai, sesi lokal dikosongkan, ringkasannya disimpan untuk ditampilkan. */
 export function finishWorkout() {
-    const finished = { ...session.value, ended_at: new Date().toISOString() };
+    if (session.value.paused_at) {
+        // Jeda yang masih berjalan dihitung sampai saat selesai.
+        session.value.paused_seconds += Math.max(0, Math.round((Date.now() - new Date(session.value.paused_at)) / 1000));
+        session.value.paused_at = null;
+    }
+    const finished = JSON.parse(JSON.stringify({ ...session.value, ended_at: new Date().toISOString() }));
+    cancelPending((i) => i.key === `workout-pause:${finished.client_id}`);
     enqueue({
         key: `workout-finish:${finished.client_id}`,
         routeName: 'workouts.finish',
         params: { workout: finished.client_id },
-        payload: { ended_at: finished.ended_at },
+        payload: { ended_at: finished.ended_at, paused_seconds: finished.paused_seconds ?? 0 },
         summary: { title: `Selesai ${finished.name}` },
         reload: true,
     });
     session.value = null;
+    lastFinished.value = finished;
     return finished;
+}
+
+export function dismissSummary() {
+    lastFinished.value = null;
 }
 
 /** Buang sesi: batalkan yang belum terkirim, minta server menghapus (soft delete). */
@@ -225,6 +272,8 @@ export function discardWorkout() {
 export function useWorkout() {
     return {
         session,
+        lastFinished,
         active: computed(() => session.value !== null),
+        paused: computed(() => !!session.value?.paused_at),
     };
 }

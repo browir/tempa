@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExerciseController;
+use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\WorkoutController;
 use Illuminate\Support\Facades\Artisan;
@@ -34,6 +35,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/latihan/{workout}/gerakan/{clientId}', [WorkoutController::class, 'destroyExercise'])->name('workout-exercises.destroy');
     Route::put('/latihan/{workout}/set/{clientId}', [WorkoutController::class, 'upsertSet'])->name('sets.upsert');
     Route::delete('/latihan/{workout}/set/{clientId}', [WorkoutController::class, 'destroySet'])->name('sets.destroy');
+
+    Route::get('/riwayat', [HistoryController::class, 'index'])->name('history.index');
+    Route::get('/riwayat/{workout}', [HistoryController::class, 'show'])->name('history.show');
 
     Route::get('/gerakan', [ExerciseController::class, 'index'])->name('exercises.index');
     Route::post('/gerakan', [ExerciseController::class, 'store'])->name('exercises.store');
