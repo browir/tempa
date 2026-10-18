@@ -1,26 +1,50 @@
 <script setup>
-import { Head, usePage } from '@inertiajs/vue3';
-import { Bike, Dumbbell, Timer } from 'lucide-vue-next';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { useNow } from '@vueuse/core';
+import { ArrowRight, Bike, Dumbbell, Plus, Timer } from 'lucide-vue-next';
 import { computed } from 'vue';
+import { route } from 'ziggy-js';
 import TempaMark from '@/components/ui/TempaMark.vue';
+import { startWorkout, useWorkout } from '@/composables/useWorkout';
+import { formatDuration } from '@/lib/units';
 
 const page = usePage();
 const firstName = computed(() => (page.props.auth.user?.name ?? '').split(' ')[0]);
+const { session } = useWorkout();
+const now = useNow({ interval: 1000 });
 
-const now = new Date();
+const today = new Date();
 const greeting = (() => {
-    const h = now.getHours();
+    const h = today.getHours();
     if (h < 11) return 'Selamat pagi';
     if (h < 15) return 'Selamat siang';
     if (h < 18) return 'Selamat sore';
     return 'Selamat malam';
 })();
-const today = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+const dateLabel = new Intl.DateTimeFormat('id-ID', { weekday: 'long', day: 'numeric', month: 'long' }).format(today);
+
+const elapsed = computed(() =>
+    session.value ? formatDuration(Math.max(0, Math.floor((now.value - new Date(session.value.started_at)) / 1000))) : '',
+);
+const doneSets = computed(() => session.value?.exercises.flatMap((e) => e.sets).filter((s) => s.done_at).length ?? 0);
+
+// Sesi yang belum selesai di server tapi tidak ada di HP ini (dimulai di perangkat lain / data lokal terhapus).
+const remote = computed(() => (session.value ? null : (page.props.activeWorkout ?? null)));
+const remoteStarted = computed(() =>
+    remote.value
+        ? new Intl.DateTimeFormat('id-ID', { weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date(remote.value.started_at))
+        : '',
+);
+
+function start() {
+    startWorkout();
+    router.visit(route('workouts.index'));
+}
 
 const upcoming = [
-    { icon: Dumbbell, title: 'Sesi latihan', text: 'Catat set berat × reps, isi otomatis dari sesi sebelumnya.' },
     { icon: Timer, title: 'Timer istirahat', text: 'Berjalan sendiri setelah set selesai, layar tetap menyala.' },
-    { icon: Bike, title: 'Kardio & sepeda', text: 'Jarak, durasi, dan kecepatan rata-rata per perjalanan.' },
+    { icon: Dumbbell, title: 'Rutinitas', text: 'Simpan program latihan, mulai sesi dari template.' },
+    { icon: Bike, title: 'Riwayat & progres', text: 'Grafik per gerakan, rekor pribadi, dan total jarak bersepeda.' },
 ];
 </script>
 
@@ -28,18 +52,52 @@ const upcoming = [
     <Head title="Beranda" />
 
     <header class="mb-6">
-        <p class="eyebrow mb-1">{{ today }}</p>
+        <p class="eyebrow mb-1">{{ dateLabel }}</p>
         <h1 class="page-title">{{ greeting }}{{ firstName ? `, ${firstName}` : '' }}</h1>
     </header>
 
     <div class="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
         <section class="hero-card p-6 md:p-8">
             <TempaMark class="absolute -right-6 -bottom-20 -z-10 size-48 text-white opacity-[0.07] md:size-56" />
-            <p class="text-small font-medium tracking-[0.08em] text-(--hero-muted) uppercase">Hari ini</p>
-            <p class="mt-2 max-w-sm text-[26px] leading-tight font-semibold tracking-[-0.03em]">Belum ada sesi latihan.</p>
-            <p class="mt-2 max-w-sm text-[15px] text-(--hero-muted)">
-                Fondasi Tempa sudah siap. Pencatatan latihan hadir di langkah berikutnya.
-            </p>
+            <template v-if="session">
+                <p class="text-small font-medium tracking-[0.08em] text-(--hero-muted) uppercase">Sesi berjalan</p>
+                <p class="mt-2 text-[26px] leading-tight font-semibold tracking-[-0.03em]">{{ session.name }}</p>
+                <p class="mt-1 text-[15px] text-(--hero-muted)">
+                    <span class="num text-(--hero-fg)">{{ elapsed }}</span> · {{ session.exercises.length }} gerakan · {{ doneSets }} set selesai
+                </p>
+                <Link
+                    :href="route('workouts.index')"
+                    class="mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-[16px] font-semibold text-(--hero-from) transition active:scale-[0.98] sm:w-auto sm:px-8"
+                >
+                    Lanjutkan
+                    <ArrowRight class="size-5" :stroke-width="2.4" />
+                </Link>
+            </template>
+            <template v-else-if="remote">
+                <p class="text-small font-medium tracking-[0.08em] text-(--hero-muted) uppercase">Sesi belum selesai</p>
+                <p class="mt-2 text-[26px] leading-tight font-semibold tracking-[-0.03em]">{{ remote.name || 'Latihan' }}</p>
+                <p class="mt-1 text-[15px] text-(--hero-muted)">Dimulai {{ remoteStarted }}</p>
+                <Link
+                    :href="route('workouts.index')"
+                    class="mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-[16px] font-semibold text-(--hero-from) transition active:scale-[0.98] sm:w-auto sm:px-8"
+                >
+                    Lanjutkan
+                    <ArrowRight class="size-5" :stroke-width="2.4" />
+                </Link>
+            </template>
+            <template v-else>
+                <p class="text-small font-medium tracking-[0.08em] text-(--hero-muted) uppercase">Hari ini</p>
+                <p class="mt-2 max-w-sm text-[26px] leading-tight font-semibold tracking-[-0.03em]">Siap menempa?</p>
+                <p class="mt-2 max-w-sm text-[15px] text-(--hero-muted)">Gym, rumahan, atau bersepeda — catat semuanya di sini.</p>
+                <button
+                    type="button"
+                    class="mt-6 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-[16px] font-semibold text-(--hero-from) transition active:scale-[0.98] sm:w-auto sm:px-8"
+                    @click="start"
+                >
+                    <Plus class="size-5" :stroke-width="2.6" />
+                    Mulai latihan
+                </button>
+            </template>
         </section>
 
         <section class="card p-5">

@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExerciseController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WorkoutController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,18 @@ Route::middleware('auth')->group(function () {
     Route::post('/keluar', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('/', DashboardController::class)->name('dashboard');
+
+    // Sesi latihan. Aksi tulis dipanggil outbox (JSON, idempoten); {workout} = client_id.
+    Route::get('/latihan', [WorkoutController::class, 'index'])->name('workouts.index');
+    Route::post('/latihan', [WorkoutController::class, 'store'])->name('workouts.store');
+    Route::put('/latihan/{workout}', [WorkoutController::class, 'update'])->name('workouts.update');
+    Route::post('/latihan/{workout}/selesai', [WorkoutController::class, 'finish'])->name('workouts.finish');
+    Route::delete('/latihan/{workout}', [WorkoutController::class, 'destroy'])->name('workouts.destroy')->withTrashed();
+    Route::post('/latihan/{workout}/gerakan', [WorkoutController::class, 'storeExercise'])->name('workout-exercises.store');
+    Route::put('/latihan/{workout}/gerakan/{clientId}', [WorkoutController::class, 'updateExercise'])->name('workout-exercises.update');
+    Route::delete('/latihan/{workout}/gerakan/{clientId}', [WorkoutController::class, 'destroyExercise'])->name('workout-exercises.destroy');
+    Route::put('/latihan/{workout}/set/{clientId}', [WorkoutController::class, 'upsertSet'])->name('sets.upsert');
+    Route::delete('/latihan/{workout}/set/{clientId}', [WorkoutController::class, 'destroySet'])->name('sets.destroy');
 
     Route::get('/gerakan', [ExerciseController::class, 'index'])->name('exercises.index');
     Route::post('/gerakan', [ExerciseController::class, 'store'])->name('exercises.store');

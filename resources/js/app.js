@@ -2,7 +2,7 @@ import '../css/app.css';
 
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { createApp, h } from 'vue';
-import { ZiggyVue } from 'ziggy-js';
+import { ZiggyVue, route } from 'ziggy-js';
 import AppLayout from './layouts/AppLayout.vue';
 import { startOutbox } from './composables/useOutbox';
 import { pushToast } from './composables/useToast';
@@ -61,6 +61,18 @@ router.on('navigate', (event) => {
 });
 
 startOutbox();
+
+// Siapkan salinan halaman Latihan & Gerakan di cache service worker selagi online, supaya sesi
+// tetap bisa dibuka/dimulai walau sinyal gym hilang sebelum halaman itu sempat dikunjungi.
+router.on('navigate', (event) => {
+    if (!navigator.onLine || event.detail.page.component.startsWith('auth/')) return;
+    clearTimeout(window.__tempaWarm);
+    window.__tempaWarm = setTimeout(() => {
+        for (const name of ['workouts.index', 'exercises.index']) {
+            if (route().has(name) && route().current() !== name) router.prefetch(route(name), { method: 'get' }, { cacheFor: '30s' });
+        }
+    }, 2500);
+});
 
 // Dibuka saat offline: HTML tersimpan bisa lebih tua dari salinan data Inertia terakhir, jadi muat ulang datanya.
 if (!navigator.onLine) setTimeout(() => router.reload(), 0);

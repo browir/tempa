@@ -32,6 +32,9 @@ class HandleInertiaRequests extends Middleware
             ],
             // Label otot / alat / jenis gerakan (statis, dari kode — tidak menyentuh DB).
             'catalog' => fn () => $user ? ExerciseCatalog::forFrontend() : null,
+            // Sesi yang belum selesai di server: Beranda menawarkan "Lanjutkan" bila HP ini belum memegangnya.
+            'activeWorkout' => fn () => $user?->workouts()->active()->latest('started_at')
+                ->first(['client_id', 'name', 'started_at'])?->only(['client_id', 'name', 'started_at']),
         ];
     }
 }

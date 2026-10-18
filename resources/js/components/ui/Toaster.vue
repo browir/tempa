@@ -5,9 +5,11 @@ import { dismissToast, useToasts } from '@/composables/useToast';
 
 const toasts = useToasts();
 
+// undo: URL (server, mis. pulihkan gerakan) atau fungsi (lokal, mis. set yang dihapus di sesi aktif).
 function undo(toast) {
     dismissToast(toast.id);
-    router.post(toast.undo, {}, { preserveScroll: true });
+    if (typeof toast.undo === 'function') toast.undo();
+    else router.post(toast.undo, {}, { preserveScroll: true });
 }
 </script>
 

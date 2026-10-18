@@ -59,7 +59,7 @@ halaman `auth/*` tanpa layout, sisanya memakai `AppLayout`.
 ## 4. Konvensi backend
 
 - **Route**: URL bahasa Indonesia, nama route bahasa Inggris. Contoh:
-  `GET /latihan` → `workouts.index`, `POST /latihan/{workout}/set` → `sets.store`,
+  `GET /latihan` → `workouts.index`, `PUT /latihan/{workout}/set/{clientId}` → `sets.upsert`,
   `/gerakan` (exercises), `/rutinitas` (routines), `/riwayat`, `/progres`, `/pengaturan`, `/masuk`, `/keluar`.
 - **Kepemilikan data**: setiap tabel milik pengguna punya `user_id`. Di controller panggil
   `$this->ensureOwned($model)` (abort 404, bukan 403 — data orang lain diperlakukan seolah tidak ada).
@@ -141,6 +141,13 @@ Prinsip:
 - **Outbox**: setiap set/sesi baru dibuat dengan `client_id` (UUID dari klien, ada cadangan bila
   `crypto.randomUUID` tidak tersedia), disimpan dulu ke localStorage, lalu dikirim berurutan saat online.
   Server menolak duplikat lewat kolom `client_id` unik → kirim ulang selalu aman (idempoten).
+  Implementasi (`useOutbox.js`): tiap item punya `key` per entitas (`set:<uuid>`, `we:<uuid>`, …); perubahan
+  baru menggantikan item lama yang belum terkirim (stepper ditekan 10× = 1 kiriman). Antrean berhenti di item
+  yang ditolak (422/404) agar anak tidak terkirim tanpa induk; DELETE yang dibalas 404 dianggap berhasil.
+  Endpoint sesi merujuk lewat `client_id` (`{workout}` = client_id, set di-PUT/upsert), membalas JSON.
+- **Sesi aktif** (`useWorkout.js`, `tempa:workout`) adalah sumber kebenaran di HP; props server hanya cadangan
+  (`hydrateFromServer` bila HP belum punya sesi). Mulai sesi baru di server menutup sesi lama yang menggantung
+  (selesai di set terakhir / dibuang bila kosong) supaya antrean offline tidak pernah macet.
 - **Sesi aktif disimpan lokal** setiap perubahan, sehingga reload / tab tertutup / offline tidak
   menghilangkan set yang sudah diketik. Tampilkan bar status offline/antrean (seperti `OfflineBar.vue`).
 - Manifest: `id`, `scope`, ikon biasa + maskable, `shortcuts` (mis. "Mulai latihan").

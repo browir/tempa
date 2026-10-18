@@ -1,24 +1,29 @@
 <script setup>
-import { useOnline } from '@vueuse/core';
+import { useIntervalFn, useOnline } from '@vueuse/core';
 import { ChevronDown, CloudUpload, TriangleAlert, WifiOff } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import { flushOutbox, removeFromOutbox, useOutbox } from '@/composables/useOutbox';
 
-/** Status offline + antrean data yang belum terkirim. Tidak tampil saat semuanya beres. */
+/**
+ * Status offline + antrean yang belum terkirim. Saat online, perubahan biasa terkirim dalam
+ * hitungan detik, jadi bar baru muncul bila antrean tertahan (> 8 dtk), ada yang ditolak, atau offline.
+ */
 const online = useOnline();
 const { items, sending, needsLogin } = useOutbox();
 const expanded = ref(false);
+const now = ref(Date.now());
+useIntervalFn(() => (now.value = Date.now()), 2000);
 
 const failed = computed(() => items.value.filter((i) => i.error));
-const visible = computed(() => !online.value || items.value.length > 0);
+const stuck = computed(() => items.value.some((i) => now.value - i.created_at > 8000));
+const visible = computed(() => !online.value || failed.value.length > 0 || needsLogin.value || stuck.value);
 
 const message = computed(() => {
     const n = items.value.length;
-    if (!n) return 'Offline · menampilkan data terakhir yang tersimpan';
-    if (failed.value.length) return `${failed.value.length} data offline ditolak server`;
-    if (needsLogin.value) return `${n} data menunggu · masuk lagi untuk mengirim`;
-    if (!online.value) return `Offline · ${n} data menunggu dikirim`;
-    return sending.value ? `Mengirim ${n} data…` : `${n} data menunggu dikirim`;
+    if (failed.value.length) return 'Ada perubahan yang ditolak server';
+    if (!online.value) return n ? `Offline · ${n} perubahan tersimpan di HP` : 'Offline · menampilkan data terakhir yang tersimpan';
+    if (needsLogin.value) return `${n} perubahan menunggu · masuk lagi untuk mengirim`;
+    return sending.value ? `Mengirim ${n} perubahan…` : `${n} perubahan menunggu dikirim`;
 });
 </script>
 
@@ -49,18 +54,17 @@ const message = computed(() => {
                     <ChevronDown class="size-4 transition-transform" :class="expanded && 'rotate-180'" />
                 </button>
             </div>
-            <ul v-if="expanded && items.length" class="border-t border-line px-3.5 py-1">
-                <li v-for="item in items" :key="item.client_id" class="flex min-h-11 items-center gap-3 py-2">
+            <ul v-if="expanded && items.length" class="max-h-64 overflow-y-auto border-t border-line px-3.5 py-1">
+                <li v-for="item in items" :key="item.id" class="flex min-h-11 items-center gap-3 py-2">
                     <span class="min-w-0 flex-1">
-                        <span class="block truncate text-ink">{{ item.summary?.title }}</span>
+                        <span class="block truncate text-ink">{{ item.summary?.title ?? 'Perubahan' }}</span>
                         <span v-if="item.error" class="block text-small text-neg">{{ item.error }}</span>
-                        <span v-else-if="item.summary?.detail" class="block text-small text-muted">{{ item.summary.detail }}</span>
                     </span>
                     <button
                         v-if="item.error"
                         type="button"
                         class="h-9 px-2 text-muted hover:text-neg"
-                        @click="removeFromOutbox(item.client_id)"
+                        @click="removeFromOutbox(item.id)"
                     >
                         Buang
                     </button>
