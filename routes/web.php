@@ -19,6 +19,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
 
     // Sesi latihan. Aksi tulis dipanggil outbox (JSON, idempoten); {workout} = client_id.
+    // Hanya UUID: kolom client_id bertipe uuid di Postgres, teks lain akan galat 500 alih-alih 404.
+    $uuid = '[\da-fA-F]{8}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{4}-[\da-fA-F]{12}';
+    Route::pattern('workout', $uuid);
+    Route::pattern('clientId', $uuid);
+
     Route::get('/latihan', [WorkoutController::class, 'index'])->name('workouts.index');
     Route::post('/latihan', [WorkoutController::class, 'store'])->name('workouts.store');
     Route::put('/latihan/{workout}', [WorkoutController::class, 'update'])->name('workouts.update');

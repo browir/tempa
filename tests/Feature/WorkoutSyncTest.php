@@ -177,6 +177,15 @@ class WorkoutSyncTest extends TestCase
         $this->assertSame(0, WorkoutSet::count());
     }
 
+    public function test_parameter_bukan_uuid_dijawab_404(): void
+    {
+        [$workout] = $this->startWorkout();
+
+        $this->postJson('/latihan/bukan-uuid/selesai', ['ended_at' => '2026-10-18T11:00:00Z'])->assertNotFound();
+        $this->deleteJson("/latihan/{$workout}/set/abc")->assertNotFound();
+        $this->putJson("/latihan/{$workout}/gerakan/abc", [])->assertNotFound();
+    }
+
     public function test_hapus_set_lalu_urungkan_memulihkan_set(): void
     {
         [$workout] = $this->startWorkout();
