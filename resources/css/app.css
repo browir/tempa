@@ -1,0 +1,344 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+@source '../**/*.blade.php';
+@source '../**/*.{js,vue}';
+
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@custom-variant touch (@media (pointer: coarse));
+@custom-variant pointer (@media (hover: hover) and (pointer: fine));
+
+/* ---------------------------------------------------------------
+   Token warna: besi & bara — netral hangat, satu aksen oranye bara.
+   --------------------------------------------------------------- */
+:root {
+    --paper: #f6f4f0;
+    --surface: #ffffff;
+    --sunken: #efebe5;
+    --line: #e6e1d9;
+    --line-strong: #d4cec3;
+    --ink: #1a1714;
+    --ink-2: #4f4a44;
+    --muted: #6e6861;
+    --accent: #c2410c;
+    --accent-hover: #a8360a;
+    --accent-fg: #ffffff;
+    --accent-soft: #fbe8dc;
+    --accent-text: #b03b0b;
+    --pos: #2e6b4c;
+    --neg: #b3261e;
+    --warn: #a86f00;
+    --bar: #d4561c;
+    --scrim: rgb(26 23 20 / 0.3);
+    --shadow: 0 1px 0 rgb(26 23 20 / 0.04), 0 12px 32px -12px rgb(26 23 20 / 0.18);
+    --shadow-card: 0 1px 2px rgb(26 23 20 / 0.04), 0 8px 24px -14px rgb(26 23 20 / 0.14);
+    --shadow-lift: 0 2px 4px rgb(26 23 20 / 0.05), 0 18px 36px -18px rgb(26 23 20 / 0.24);
+    --glow: color-mix(in oklab, #e0601f 9%, transparent);
+
+    /* Kartu utama: besi gelap yang memerah seperti logam di tungku. */
+    --hero-from: #2a1a12;
+    --hero-to: #b4441a;
+    --hero-fg: #ffffff;
+    --hero-muted: rgb(255 255 255 / 0.68);
+    --hero-glass: rgb(255 255 255 / 0.12);
+
+    /* Warna identitas (mis. kelompok otot) */
+    --c-teal: #1a9a82;
+    --c-clay: #d0683a;
+    --c-ink: #2f6db5;
+    --c-sand: #c38a0a;
+    --c-plum: #7556b8;
+    --c-moss: #4e8f2e;
+    --c-rose: #d2557f;
+    --c-iris: #5b6cc4;
+    --c-slate: #7a7f89;
+
+    color-scheme: light;
+}
+
+[data-theme='dark'] {
+    --paper: #121110;
+    --surface: #1a1816;
+    --sunken: #221f1c;
+    --line: #2b2824;
+    --line-strong: #3b3732;
+    --ink: #efebe6;
+    --ink-2: #bdb6ad;
+    --muted: #938b82;
+    --accent: #f2884b;
+    --accent-hover: #f59d68;
+    --accent-fg: #1c0f06;
+    --accent-soft: #2e1d13;
+    --accent-text: #f59a5f;
+    --pos: #7fc4a0;
+    --neg: #f08a7e;
+    --warn: #e0b04a;
+    --bar: #e8733a;
+    --scrim: rgb(0 0 0 / 0.55);
+    --shadow: 0 1px 0 rgb(0 0 0 / 0.2), 0 16px 40px -12px rgb(0 0 0 / 0.6);
+    --shadow-card: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 10px 28px -16px rgb(0 0 0 / 0.7);
+    --shadow-lift: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 20px 40px -18px rgb(0 0 0 / 0.8);
+    --glow: color-mix(in oklab, #e8733a 12%, transparent);
+
+    --hero-from: #24150e;
+    --hero-to: #9a3a15;
+    --hero-fg: #fbf3ec;
+    --hero-muted: rgb(251 243 236 / 0.66);
+    --hero-glass: rgb(255 255 255 / 0.09);
+
+    --c-teal: #22a58c;
+    --c-clay: #d9733f;
+    --c-ink: #4a86d0;
+    --c-sand: #b98a16;
+    --c-plum: #8c70d2;
+    --c-moss: #5e9e3a;
+    --c-rose: #db6a92;
+    --c-iris: #6f80d6;
+    --c-slate: #8b9099;
+
+    color-scheme: dark;
+}
+
+@theme inline {
+    --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+
+    --color-paper: var(--paper);
+    --color-surface: var(--surface);
+    --color-sunken: var(--sunken);
+    --color-line: var(--line);
+    --color-line-strong: var(--line-strong);
+    --color-ink: var(--ink);
+    --color-ink-2: var(--ink-2);
+    --color-muted: var(--muted);
+    --color-accent: var(--accent);
+    --color-accent-hover: var(--accent-hover);
+    --color-accent-fg: var(--accent-fg);
+    --color-accent-soft: var(--accent-soft);
+    --color-accent-text: var(--accent-text);
+    --color-pos: var(--pos);
+    --color-neg: var(--neg);
+    --color-warn: var(--warn);
+    --color-bar: var(--bar);
+    --color-scrim: var(--scrim);
+
+    --shadow-float: var(--shadow);
+    --shadow-card: var(--shadow-card);
+    --shadow-lift: var(--shadow-lift);
+    --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+    html {
+        -webkit-tap-highlight-color: transparent;
+        text-size-adjust: 100%;
+        overscroll-behavior-y: none;
+    }
+
+    /* Matikan zoom (ketuk-dua-kali & cubit), geser tetap bisa. Dipasang di semua elemen
+       karena touch-action tidak menembus kontainer gulir bersarang. iOS Safari
+       mengabaikan ini untuk cubit; ditangani di app.js (gesturestart). */
+    * {
+        touch-action: pan-x pan-y;
+    }
+
+    body {
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--font-sans);
+        font-feature-settings: 'ss01', 'cv11';
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+
+    ::selection {
+        background: var(--accent-soft);
+        color: var(--ink);
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--accent-text);
+        outline-offset: 2px;
+        border-radius: 6px;
+    }
+
+    button {
+        cursor: pointer;
+    }
+}
+
+@utility tnum {
+    font-variant-numeric: tabular-nums;
+}
+
+@utility no-scrollbar {
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* Teks kecil: zoom dimatikan di HP, jadi di layar sentuh dibuat 1px lebih besar.
+   Pakai ini, bukan text-[10.5px]/[11px]/[12px]. */
+@utility text-2xs {
+    font-size: 10.5px;
+    @media (pointer: coarse) {
+        font-size: 11.5px;
+    }
+}
+@utility text-tiny {
+    font-size: 11px;
+    @media (pointer: coarse) {
+        font-size: 12px;
+    }
+}
+@utility text-small {
+    font-size: 12px;
+    @media (pointer: coarse) {
+        font-size: 13px;
+    }
+}
+
+@utility pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pt-safe {
+    padding-top: env(safe-area-inset-top);
+}
+
+@layer components {
+    /* Di gym target sentuh ≥ 48px: tombol & field 44px di desktop, 48px di layar sentuh. */
+    .btn {
+        @apply inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition-[background-color,color,transform,opacity] duration-150 select-none active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 touch:h-12;
+    }
+    .btn-primary {
+        @apply bg-accent text-accent-fg hover:bg-accent-hover;
+    }
+    .btn-quiet {
+        @apply bg-sunken text-ink hover:bg-line;
+    }
+    .btn-ghost {
+        @apply text-ink-2 hover:bg-sunken hover:text-ink;
+    }
+    .btn-danger {
+        @apply text-neg hover:bg-sunken;
+    }
+    .icon-btn {
+        @apply inline-flex size-10 items-center justify-center rounded-xl text-ink-2 transition-colors hover:bg-sunken hover:text-ink active:scale-95 touch:size-12;
+    }
+
+    .field {
+        @apply block h-11 w-full rounded-xl border border-line bg-surface px-3.5 text-[15px] text-ink transition-colors outline-none placeholder:text-muted focus:border-accent-text touch:h-12;
+    }
+    .field-label {
+        @apply mb-1.5 block text-[13px] font-medium text-ink-2;
+    }
+    .field-error {
+        @apply mt-1.5 text-[13px] text-neg;
+    }
+
+    .chip {
+        @apply inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-sm whitespace-nowrap text-ink-2 transition-[background-color,border-color,color] duration-150 hover:border-line-strong hover:text-ink touch:h-10;
+    }
+    .chip[aria-pressed='true'] {
+        @apply border-accent bg-accent text-accent-fg;
+    }
+
+    /* Kartu dasar: permukaan + garis tipis + bayangan lembut. */
+    .card {
+        @apply rounded-[22px] border border-line bg-surface shadow-card;
+    }
+    /* Kartu yang bisa diklik: sedikit terangkat saat disorot (desktop). */
+    .card-hover {
+        @apply transition-[box-shadow,transform,border-color] duration-200 ease-out-soft active:scale-[0.99] pointer:hover:-translate-y-0.5 pointer:hover:border-line-strong pointer:hover:shadow-lift;
+    }
+    .section-title {
+        @apply text-[15px] font-semibold tracking-[-0.01em];
+    }
+    .page-title {
+        @apply text-[26px] font-semibold tracking-[-0.03em] md:text-[32px];
+    }
+
+    /* Kartu utama (sesi aktif / sorotan). */
+    .hero-card {
+        @apply relative isolate overflow-hidden rounded-[28px] text-(--hero-fg);
+        background:
+            radial-gradient(120% 90% at 100% 0%, rgb(255 190 120 / 0.22), transparent 55%),
+            radial-gradient(90% 80% at 0% 100%, rgb(0 0 0 / 0.22), transparent 60%),
+            linear-gradient(135deg, var(--hero-from), var(--hero-to));
+        box-shadow:
+            0 1px 0 rgb(255 255 255 / 0.12) inset,
+            0 22px 44px -22px color-mix(in oklab, var(--hero-to) 70%, transparent);
+    }
+    .hero-glass {
+        @apply bg-(--hero-glass) backdrop-blur-sm;
+    }
+
+    .eyebrow {
+        @apply text-small font-medium tracking-[0.08em] text-muted uppercase;
+    }
+
+    /* Angka besar (berat, reps, timer): mono, tabular. */
+    .num {
+        @apply font-mono tnum tracking-[-0.02em];
+    }
+}
+
+/* ---------------------------------------------------------------
+   Gerak
+   --------------------------------------------------------------- */
+@keyframes rise {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+}
+
+.page-enter {
+    /* "backwards", bukan "both": animasi transform yang tetap menempel membuat
+       elemen position:fixed di dalam halaman ikut menempel ke halaman, bukan layar. */
+    animation: rise 0.32s var(--ease-out-soft) backwards;
+}
+
+.list-enter-active,
+.list-leave-active {
+    transition:
+        opacity 0.24s var(--ease-out-soft),
+        transform 0.24s var(--ease-out-soft);
+}
+.list-enter-from {
+    opacity: 0;
+    transform: translateY(-6px);
+}
+.list-leave-to {
+    opacity: 0;
+    transform: translateX(-16px);
+}
+.list-leave-active {
+    position: absolute;
+    width: 100%;
+}
+.list-move {
+    transition: transform 0.28s var(--ease-out-soft);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
