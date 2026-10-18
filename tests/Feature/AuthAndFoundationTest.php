@@ -129,6 +129,13 @@ class AuthAndFoundationTest extends TestCase
         $this->assertSame('tempa', $vercel['env']['DB_SEARCH_PATH']);
     }
 
+    public function test_zona_waktu_wita(): void
+    {
+        $this->assertSame('Asia/Makassar', config('app.timezone'));
+        $vercel = json_decode(file_get_contents(base_path('vercel.json')), true);
+        $this->assertSame('Asia/Makassar', $vercel['env']['APP_TIMEZONE']);
+    }
+
     public function test_ops_migrate_menolak_token_salah(): void
     {
         $this->get('/_ops/migrate/token-ngawur')->assertNotFound();

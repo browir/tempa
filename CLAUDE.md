@@ -102,7 +102,7 @@ Prinsip:
   bukan disimpan manual. Simpan cache hanya kalau terbukti lambat.
 - **"Sebelumnya"**: saat menambah set, tampilkan set yang sama dari sesi terakhir gerakan itu dan isi
   otomatis berat/reps dari sana.
-- Tanggal & jam memakai `APP_TIMEZONE=Asia/Jakarta`; `APP_LOCALE=id`.
+- Tanggal & jam memakai `APP_TIMEZONE=Asia/Makassar` (WITA, UTC+8 — pengguna di Indonesia tengah; keputusan user 2026-10-18); `APP_LOCALE=id`.
 
 ## 6. Konvensi frontend
 
