@@ -167,6 +167,11 @@
     button {
         cursor: pointer;
     }
+
+    /* Tombol hapus bawaan kotak cari disembunyikan: komponen memasang tombolnya sendiri (target 48px). */
+    input[type='search']::-webkit-search-cancel-button {
+        appearance: none;
+    }
 }
 
 @utility tnum {

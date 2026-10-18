@@ -1,6 +1,6 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3';
-import { ChartLine, Dumbbell, History, House, LogOut, Moon, Settings, Sun } from 'lucide-vue-next';
+import { ChartLine, Dumbbell, Flame, History, House, LogOut, Moon, Settings, Sun } from 'lucide-vue-next';
 import { computed } from 'vue';
 import { route } from 'ziggy-js';
 import OfflineBar from '@/components/OfflineBar.vue';
@@ -23,7 +23,8 @@ const initials = computed(() =>
 // Menu muncul sendiri begitu route-nya ada (fitur ditambahkan bertahap).
 const nav = [
     { label: 'Beranda', route: 'dashboard', icon: House, match: 'Dashboard' },
-    { label: 'Latihan', route: 'workouts.index', icon: Dumbbell, match: ['workouts/', 'exercises/', 'routines/'] },
+    { label: 'Latihan', route: 'workouts.index', icon: Flame, match: ['workouts/', 'routines/'] },
+    { label: 'Gerakan', route: 'exercises.index', icon: Dumbbell, match: 'exercises/' },
     { label: 'Riwayat', route: 'history.index', icon: History, match: 'history/' },
     { label: 'Progres', route: 'progress.index', icon: ChartLine, match: 'progress/' },
     { label: 'Pengaturan', route: 'settings', icon: Settings, match: 'settings/' },

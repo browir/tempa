@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExerciseController;
 use App\Http\Controllers\SettingsController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/keluar', [LoginController::class, 'destroy'])->name('logout');
 
     Route::get('/', DashboardController::class)->name('dashboard');
+
+    Route::get('/gerakan', [ExerciseController::class, 'index'])->name('exercises.index');
+    Route::post('/gerakan', [ExerciseController::class, 'store'])->name('exercises.store');
+    Route::put('/gerakan/{exercise}', [ExerciseController::class, 'update'])->name('exercises.update');
+    Route::post('/gerakan/{exercise}/arsipkan', [ExerciseController::class, 'archive'])->name('exercises.archive');
+    Route::post('/gerakan/{exercise}/pulihkan', [ExerciseController::class, 'unarchive'])->name('exercises.unarchive');
 
     Route::get('/pengaturan', [SettingsController::class, 'edit'])->name('settings');
 });

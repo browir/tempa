@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\ExerciseCatalog;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -29,6 +30,8 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user?->only(['id', 'name', 'email']),
             ],
+            // Label otot / alat / jenis gerakan (statis, dari kode — tidak menyentuh DB).
+            'catalog' => fn () => $user ? ExerciseCatalog::forFrontend() : null,
         ];
     }
 }
