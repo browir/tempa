@@ -83,16 +83,16 @@ halaman `auth/*` tanpa layout, sisanya memakai `AppLayout`.
 
 | Tabel | Kolom penting |
 |---|---|
-| `exercises` | user_id, name, muscle_group, equipment, kind (`weight_reps` / `bodyweight` / `time` / `cardio`), notes, archived_at, sort — kunci & label di `AppSupportxerciseCatalog` |
+| `exercises` | user_id, name, muscle_group, equipment, kind (`weight_reps` / `bodyweight` / `time` / `cardio`), notes, archived_at, sort — kunci & label di `App\Support\ExerciseCatalog` |
 | `routines` | user_id, name, notes, sort — template latihan |
 | `routine_exercises` | routine_id, exercise_id, sort, target_sets, target_reps, rest_seconds |
 | `workouts` | user_id, routine_id?, name, started_at, ended_at?, notes, client_id (unique), soft deletes |
 | `workout_exercises` | workout_id, exercise_id, sort, notes |
 | `sets` | workout_exercise_id, sort, kind (`warmup` / `normal` / `drop` / `failure`), weight_g?, reps?, duration_s?, distance_m?, rpe?, done_at?, client_id (unique) |
+| `body_logs` | user_id, logged_on, weight_g, notes |
 
 Isian set per jenis gerakan: `weight_reps` → weight_g + reps; `bodyweight` → reps (+ weight_g = beban tambahan, opsional);
 `time` → duration_s; `cardio` → distance_m + duration_s (kecepatan/tempo dihitung di tampilan, tidak disimpan).
-| `body_logs` | user_id, logged_on, weight_g, notes |
 
 Prinsip:
 - **Angka disimpan sebagai integer** dalam satuan terkecil (seperti Sisih menyimpan rupiah): berat dalam
